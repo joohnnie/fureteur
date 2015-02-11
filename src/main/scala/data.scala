@@ -33,6 +33,7 @@ class Data(m:Map[String, JValue]) {
   def get(s:String):String = {
     map(s) match {
       case JString(s) => s
+      case JInt(i) => i.toString
       case _ => throw new WrongValueType
     }
   }
@@ -69,7 +70,7 @@ class Data(m:Map[String, JValue]) {
   }
 
   def exists(s:String) = {
-    map contains s
+    if(map contains s) map(s)!=JNull else false
   }
 
   def getObject(s:String) = {

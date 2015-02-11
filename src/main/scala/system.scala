@@ -25,7 +25,13 @@ class System(config:Config) {
   val name= config("instance")
   val control= new PipelineControl(config)
 
-  val pipelines= (config unwrapArray "pipelines") map (new Pipeline(_, control, asys))
+  val pipelines= 
+    if(config exists "proxies") {
+      val proxies= (config unwrapArray "proxies") map( p => (p("host"), p("port")) )
+      proxies map( pkv =>
+        (config unwrapArray "pipelines") map ( c => new Pipeline(c ++ (("proxy_host", pkv._1) :: ("proxy_port", pkv._2) :: Nil) , control, asys)) ) flatten
+    }
+    else (config unwrapArray "pipelines") map (new Pipeline(_, control, asys))
 
   def start():Unit = {
     pipelines map ( (p) => p.start )
@@ -57,7 +63,7 @@ class Pipeline(config:Config, control:Control, asys:ActorSystem) {
 
   val writeback= newWriteback(config.getObject("writeback"))
 
-  val httpManager= new HttpManager(config.getObject("httpManager"))
+  val httpManager= new HttpManager(config.getObject("httpManager"), config)
 
   val fetchers= (config unwrapArray "httpFetchers") map ( f => asys.actorOf(Props(new HttpFetcher(f, prefetch, writeback, httpManager )) /*, name= "fetcher"*/ ) )
 
